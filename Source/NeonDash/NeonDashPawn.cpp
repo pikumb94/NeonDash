@@ -50,6 +50,10 @@ ANeonDashPawn::ANeonDashPawn()
 	GunOffset = FVector(90.f, 0.f, 0.f);
 	FireRate = 0.1f;
 	bCanFire = true;
+
+	AutoPossessPlayer = EAutoReceiveInput::Disabled;
+	AutoPossessAI = EAutoPossessAI::Disabled;
+	
 }
 
 void ANeonDashPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
