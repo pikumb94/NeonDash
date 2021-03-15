@@ -9,7 +9,7 @@
 // Sets default values for this component's properties
 UHealthComponent::UHealthComponent()
 {
-	DefaultHealth = 100;
+	DefaultHealth = Health;
 	bIsDead = false;
 
 	TeamNum = 255;
@@ -117,6 +117,11 @@ bool UHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 float UHealthComponent::GetHealth() const
 {
 	return Health;
+}
+
+void UHealthComponent::SetHealth(float NewHealth)
+{
+	Health = NewHealth;
 }
 
 
