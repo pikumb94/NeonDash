@@ -1,2 +1,2 @@
 # NeonDash
-A little arena game to test Online Multiplayer and AI on UE4.
+A little arena game to test Local and Online Multiplayer on UE4.
