@@ -68,8 +68,14 @@ void ANeonDashPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ShipMaterialInstance = UMaterialInstanceDynamic::Create(ShipMeshComponent->GetMaterial(4), nullptr);
-	ShipMeshComponent->SetMaterial(4, ShipMaterialInstance);
+
+}
+
+void ANeonDashPawn::InitShipMaterial(UMaterialInterface* PlayerMaterial)
+{
+	//ShipMeshComponent->SetMaterial(4, PlayerMaterial);
+	ShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
+	ShipMeshComponent->SetMaterial(1, ShipMaterialInstance);
 }
 
 void ANeonDashPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -207,6 +213,7 @@ void ANeonDashPawn::SetChargeValues(int chargeValue)
 	}
 
 }
+
 
 void ANeonDashPawn::OnPawnDash()
 {

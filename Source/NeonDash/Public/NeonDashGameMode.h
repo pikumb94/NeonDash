@@ -16,6 +16,18 @@ UCLASS(MinimalAPI)
 class ANeonDashGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
+	/* Player1 Material */
+	UPROPERTY(Category = Material, EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UMaterialInterface* MaterialP1;
+	/* Player2 Material */
+	UPROPERTY(Category = Material, EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UMaterialInterface* MaterialP2;
+	/* Player3 Material */
+	UPROPERTY(Category = Material, EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UMaterialInterface* MaterialP3;
+	/* Player4 Material */
+	UPROPERTY(Category = Material, EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UMaterialInterface* MaterialP4;
 
 protected:
 
@@ -35,18 +47,21 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GameMode")
 	FOnActorKilled OnActorKilled;
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "GameMode")
+	UFUNCTION(/*BlueprintImplementableEvent, Category = "GameMode"*/)
 	void SpawnPlayer(APlayerController* PC);
 
 	UPROPERTY(BlueprintReadOnly, Category = "SpawnLocations")
 	TArray<APlayerStart*> SpawnPoints;
+
+	/** Pawn Class to spawn when player is dashing */
+	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<class ANeonDashPawn> NeonDashPawnClass;
 private:
 	
 
-	int CurrNumPlayers = 0;//TO MOVE FROM HERE!
+	//int CurrNumPlayers = 0;//TO MOVE FROM HERE!
 	int MaxNumPlayers = 4;
-
-	APawn* LastSpawnedPawn;
+	class ANeonDashPawn* LastSpawnedPawn;
 };
 
 
