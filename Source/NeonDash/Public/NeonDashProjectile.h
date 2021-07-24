@@ -31,7 +31,10 @@ public:
 	/** Function to handle the projectile hitting something */
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
-	/** Function to handle the projectile overlapping something */
+	/** Function to handle the projectile when it begins to overlap */
+	UFUNCTION()
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	/** Function to handle the projectile it ends to overlap */
 	UFUNCTION()
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	/** Returns ProjectileMesh subobject **/
@@ -46,6 +49,8 @@ public:
 private:
 
 	int AllowedBounceCount;
+
+	bool bCanProjectileDamage;
 
 	class UMaterialInstanceDynamic* ProjectileMaterialInstance;
 };

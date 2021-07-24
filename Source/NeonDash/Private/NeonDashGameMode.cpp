@@ -8,6 +8,7 @@
 #include "NeonDashPlayerController.h"
 #include "InitPawn.h"
 #include "NeonDashGameState.h"
+#include "NeonDashPlayerState.h"
 
 ANeonDashGameMode::ANeonDashGameMode()
 {
@@ -21,6 +22,7 @@ ANeonDashGameMode::ANeonDashGameMode()
 	MaterialP4 = CreateDefaultSubobject<UMaterialInterface>(TEXT("P4Material"));
 
 	OnPlayerSpawn.AddDynamic(this, &ANeonDashGameMode::SpawnPlayer);
+	OnActorKilled.AddDynamic(this, &ANeonDashGameMode::IngamePlayerKilled);
 }
 
 void ANeonDashGameMode::BeginPlay()
@@ -93,10 +95,18 @@ void ANeonDashGameMode::SpawnPlayer(APlayerController* PC) {
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, (PC->GetPawn()? PC->GetPawn()->GetName():FString("NO PAWN")));
 
 	PC->Possess(LastSpawnedPawn);
-	
+	auto NDPlayerState = Cast<ANeonDashPlayerState>(LastSpawnedPawn->GetPlayerState());
+	if (NDPlayerState)
+		NDPlayerState->SetPlayerState(SpawnPointIndex);
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (PC->GetPawn() ? PC->GetPawn()->GetName() : FString("NO PAWN")));
 
 	PC->SetViewTargetWithBlend(GameCamera);
 
 	
+}
+
+void ANeonDashGameMode::IngamePlayerKilled(AActor* VictimActor, AActor* KillerActor, AController* KillerController)
+{
+	VictimActor->Destroy();
+	//@TODO: update scores and player total lives
 }

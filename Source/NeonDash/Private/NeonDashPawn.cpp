@@ -73,9 +73,19 @@ void ANeonDashPawn::BeginPlay()
 
 void ANeonDashPawn::InitShipMaterial(UMaterialInterface* PlayerMaterial)
 {
-	//ShipMeshComponent->SetMaterial(4, PlayerMaterial);
-	ShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
-	ShipMeshComponent->SetMaterial(1, ShipMaterialInstance);
+	//Ship Body 1
+	BodyShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
+	ShipMeshComponent->SetMaterial(1, BodyShipMaterialInstance);
+
+	//Ship Center Sphere 4 
+	CoreShipMaterialInstance = UMaterialInstanceDynamic::Create(ShipMeshComponent->GetMaterial(4), nullptr);
+	ShipMeshComponent->SetMaterial(4, CoreShipMaterialInstance);
+
+	//Ship Bumps 0,3,5
+	BumpsShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
+	ShipMeshComponent->SetMaterial(0, BumpsShipMaterialInstance);
+	ShipMeshComponent->SetMaterial(3, BumpsShipMaterialInstance);
+	ShipMeshComponent->SetMaterial(5, BumpsShipMaterialInstance);
 }
 
 void ANeonDashPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -166,7 +176,10 @@ void ANeonDashPawn::FireShot(FVector FireDirection)
 			if (World != nullptr)
 			{
 				// spawn the projectile
-				World->SpawnActor<ANeonDashProjectile>(SpawnLocation, FireRotation)->SetProjectileChargeState(chargeMultiplier);
+				auto Projectile = World->SpawnActor<ANeonDashProjectile>(SpawnLocation, FireRotation);
+				Projectile->SetInstigator(this);
+				Projectile->SetProjectileChargeState(chargeMultiplier);
+
 			}
 
 			bCanFire = false;
@@ -204,11 +217,11 @@ void ANeonDashPawn::SetChargeValues(int chargeValue)
 {
 	if (chargeValue == 0) {
 		//reset
-		ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 0);
+		CoreShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 0);
 		MoveSpeed = MoveSpeedInit;
 	}
 	else {
-		ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), chargeValue * 5);
+		CoreShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), chargeValue * 5);
 		MoveSpeed /= 2;
 	}
 
@@ -235,44 +248,46 @@ void ANeonDashPawn::OnPawnDash()
 
 		const FRotator NewRotation = Movement.Rotation();
 
+		FVector RealMovement = GetActorLocation();
 		RootComponent->MoveComponent(Movement, NewRotation, true);
-
+		RealMovement = GetActorLocation() - RealMovement;
 
 		if (DashBarrierClass)
 		{
-			FVector BarrierLocation = GetActorLocation() - (Movement / 2.f);
+			FVector BarrierLocation = GetActorLocation() - (RealMovement / 2.f);//Movement
 			FRotator BarrierRotation = GetActorForwardVector().Rotation();
+
+			FActorSpawnParameters SpawnInfo;
+			SpawnInfo.Owner = this;
+
+			AActor* NewBarrier = GetWorld()->SpawnActor<AActor>(DashBarrierClass, BarrierLocation, BarrierRotation, SpawnInfo);
+
+			NewBarrier->SetActorScale3D(FVector(RealMovement.Size() / 100.f, 1.f, 1.f));//DashOffset
+			UStaticMeshComponent* BarrierMesh = Cast<UStaticMeshComponent>(NewBarrier->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+
+			if (BarrierMesh)
+			{
+				auto BarrierMaterial = BarrierMesh->GetMaterial(0);
+				auto DynamicMat = UMaterialInstanceDynamic::Create(BarrierMaterial, nullptr);
+				//auto ShipMaterial = ShipMeshComponent->GetMaterial(0);
+				FLinearColor ShipColor;
+				BodyShipMaterialInstance->GetVectorParameterValue(TEXT("DiffuseColor"), ShipColor);
+				DynamicMat->SetVectorParameterValue(TEXT("DiffuseColor"), ShipColor);
+				BarrierMesh->SetMaterial(0, DynamicMat);
+			}
 
 			if (MaxBarriersAllowed > 0)
 			{
-
-				FActorSpawnParameters SpawnInfo;
-				SpawnInfo.Owner = this;
-				AActor* NewBarrier = GetWorld()->SpawnActor<AActor>(DashBarrierClass, BarrierLocation, BarrierRotation, SpawnInfo);
-				NewBarrier->SetActorScale3D(FVector(DashOffest / 100.f, 1.f, 1.f));
-				UStaticMeshComponent* BarrierMesh = Cast<UStaticMeshComponent>(NewBarrier->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-
-				if (BarrierMesh)
-				{
-					auto BarrierMaterial = BarrierMesh->GetMaterial(0);
-					auto DynamicMat = UMaterialInstanceDynamic::Create(BarrierMaterial, nullptr);
-					//auto ShipMaterial = ShipMeshComponent->GetMaterial(0);
-					FLinearColor ShipColor;
-					ShipMaterialInstance->GetVectorParameterValue(TEXT("DiffuseColor"), ShipColor);
-					DynamicMat->SetVectorParameterValue(TEXT("DiffuseColor"), ShipColor);
-					BarrierMesh->SetMaterial(0, DynamicMat);
-				}
-
-				SpawnedBarriers.Enqueue(NewBarrier);
 				MaxBarriersAllowed--;
+				SpawnedBarriers.Enqueue(NewBarrier);
 			}
 			else {
 
-				AActor* OldestBarrier = nullptr;
+				AActor* OldestSpawnedBarrier = nullptr;
 
-				if (SpawnedBarriers.Dequeue(OldestBarrier)) {
-					OldestBarrier->SetActorLocationAndRotation(BarrierLocation, BarrierRotation);
-					SpawnedBarriers.Enqueue(OldestBarrier);
+				if (SpawnedBarriers.Dequeue(OldestSpawnedBarrier)) {
+					OldestSpawnedBarrier->Destroy();
+					SpawnedBarriers.Enqueue(NewBarrier);
 				}
 
 			}

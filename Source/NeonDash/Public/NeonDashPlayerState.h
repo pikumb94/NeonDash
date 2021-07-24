@@ -6,7 +6,7 @@
 #include "GameFramework/PlayerState.h"
 #include "NeonDashPlayerState.generated.h"
 
-class UHealthComponent;
+class UReplicatedStateComponent;
 
 UCLASS()
 class NEONDASH_API ANeonDashPlayerState : public APlayerState
@@ -22,10 +22,16 @@ public:
 	/** Gets the literal value of health. */
 	float GetHealth() const;
 
+	/** Gets the literal value of health. */
+	float GetPlayerTeamNumber() const;
+
 	/** Sets the value of Health without causing other side effects to this instance. */
 	void SetHealth(const float NewHealth);
 
+	/** Sets the state of the Player in particular its team number and health. */
+	void SetPlayerState(uint8 teamNum);
+
 private:
-	UPROPERTY(VisibleAnywhere, Category = "HealthComp")
-	UHealthComponent* HealthComponent;
+	UPROPERTY(VisibleAnywhere, Category = "RepStateComp")
+	UReplicatedStateComponent* RepStateComp;
 };

@@ -47,8 +47,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GameMode")
 	FOnActorKilled OnActorKilled;
 
-	UFUNCTION(/*BlueprintImplementableEvent, Category = "GameMode"*/)
+	UFUNCTION()
 	void SpawnPlayer(APlayerController* PC);
+
+	UFUNCTION()
+	void IngamePlayerKilled(AActor* VictimActor, AActor* KillerActor, AController* KillerController);
 
 	UPROPERTY(BlueprintReadOnly, Category = "SpawnLocations")
 	TArray<APlayerStart*> SpawnPoints;
@@ -57,9 +60,7 @@ public:
 	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class ANeonDashPawn> NeonDashPawnClass;
 private:
-	
 
-	//int CurrNumPlayers = 0;//TO MOVE FROM HERE!
 	int MaxNumPlayers = 4;
 	class ANeonDashPawn* LastSpawnedPawn;
 };

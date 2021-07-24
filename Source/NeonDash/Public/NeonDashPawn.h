@@ -104,7 +104,9 @@ private:
 	size_t chargeMultiplier;
 
 
-	class UMaterialInstanceDynamic* ShipMaterialInstance;
+	class UMaterialInstanceDynamic* BodyShipMaterialInstance;
+	class UMaterialInstanceDynamic* BumpsShipMaterialInstance;
+	class UMaterialInstanceDynamic* CoreShipMaterialInstance;
 
 	/** Handle for the management of the charging shot fire */
 	FTimerHandle TimerHandle_ChargeTimer;

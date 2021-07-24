@@ -1,15 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "HealthComponent.h"
+#include "ReplicatedStateComponent.h"
 #include "NeonDashGameMode.h"
 #include "Net/UnrealNetwork.h"
-
+#include "NeonDashPlayerState.h"
 
 // Sets default values for this component's properties
-UHealthComponent::UHealthComponent()
+UReplicatedStateComponent::UReplicatedStateComponent()
 {
-	DefaultHealth = Health;
+	DefaultHealth = Health = 3.f;
 	bIsDead = false;
 
 	TeamNum = 255;
@@ -19,7 +19,7 @@ UHealthComponent::UHealthComponent()
 
 
 // Called when the game starts
-void UHealthComponent::BeginPlay()
+void UReplicatedStateComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -29,7 +29,7 @@ void UHealthComponent::BeginPlay()
 		AActor* MyOwner = GetOwner();
 		if (MyOwner)
 		{
-			MyOwner->OnTakeAnyDamage.AddDynamic(this, &UHealthComponent::HandleTakeAnyDamage);
+			MyOwner->OnTakeAnyDamage.AddDynamic(this, &UReplicatedStateComponent::HandleTakeAnyDamage);
 		}
 	}
 
@@ -37,7 +37,7 @@ void UHealthComponent::BeginPlay()
 }
 
 
-void UHealthComponent::OnRep_Health(float OldHealth)
+void UReplicatedStateComponent::OnRep_Health(float OldHealth)
 {
 	float Damage = Health - OldHealth;
 
@@ -45,7 +45,7 @@ void UHealthComponent::OnRep_Health(float OldHealth)
 }
 
 
-void UHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy,
+void UReplicatedStateComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy,
 	AActor* DamageCauser)
 {
 	if (Damage <= 0.0f || bIsDead)
@@ -72,13 +72,16 @@ void UHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, c
 		ANeonDashGameMode* GM = Cast<ANeonDashGameMode>(GetWorld()->GetAuthGameMode());
 		if (GM)
 		{
-			GM->OnActorKilled.Broadcast(GetOwner(), DamageCauser, InstigatedBy);
+			auto PlayerStateActor = Cast<ANeonDashPlayerState>(DamagedActor);
+			auto PlayerStateCauser = Cast<ANeonDashPlayerState>(DamageCauser);
+			
+			GM->OnActorKilled.Broadcast(PlayerStateActor->GetPawn(), PlayerStateCauser->GetPawn(), InstigatedBy);
 		}
 	}
 }
 
 
-void UHealthComponent::Heal(float HealAmount)
+void UReplicatedStateComponent::Heal(float HealAmount)
 {
 	if (HealAmount <= 0.0f || Health <= 0.0f)
 	{
@@ -93,7 +96,7 @@ void UHealthComponent::Heal(float HealAmount)
 }
 
 
-bool UHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
+bool UReplicatedStateComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 {
 	if (ActorA == nullptr || ActorB == nullptr)
 	{
@@ -101,8 +104,8 @@ bool UHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 		return true;
 	}
 
-	UHealthComponent* HealthCompA = Cast<UHealthComponent>(ActorA->GetComponentByClass(UHealthComponent::StaticClass()));
-	UHealthComponent* HealthCompB = Cast<UHealthComponent>(ActorB->GetComponentByClass(UHealthComponent::StaticClass()));
+	UReplicatedStateComponent* HealthCompA = Cast<UReplicatedStateComponent>(ActorA->GetComponentByClass(UReplicatedStateComponent::StaticClass()));
+	UReplicatedStateComponent* HealthCompB = Cast<UReplicatedStateComponent>(ActorB->GetComponentByClass(UReplicatedStateComponent::StaticClass()));
 
 	if (HealthCompA == nullptr || HealthCompB == nullptr)
 	{
@@ -114,21 +117,21 @@ bool UHealthComponent::IsFriendly(AActor* ActorA, AActor* ActorB)
 }
 
 
-float UHealthComponent::GetHealth() const
+float UReplicatedStateComponent::GetHealth() const
 {
 	return Health;
 }
 
-void UHealthComponent::SetHealth(float NewHealth)
+void UReplicatedStateComponent::SetHealth(float NewHealth)
 {
 	Health = NewHealth;
 }
 
 
-void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void UReplicatedStateComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UHealthComponent, Health);
+	DOREPLIFETIME(UReplicatedStateComponent, Health);
 }
 

@@ -6,6 +6,9 @@
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Engine/StaticMesh.h"
+#include "NeonDashPawn.h"
+#include "NeonDashPlayerState.h"
+#include "Kismet/GameplayStatics.h"
 
 ANeonDashProjectile::ANeonDashProjectile() 
 {
@@ -18,7 +21,9 @@ ANeonDashProjectile::ANeonDashProjectile()
 	ProjectileMesh->SetupAttachment(RootComponent);
 	ProjectileMesh->BodyInstance.SetCollisionProfileName("Projectile");
 	ProjectileMesh->OnComponentHit.AddDynamic(this, &ANeonDashProjectile::OnHit);		// set up a notification for when this component hits something
+	ProjectileMesh->OnComponentBeginOverlap.AddDynamic(this, &ANeonDashProjectile::OnBeginOverlap);
 	ProjectileMesh->OnComponentEndOverlap.AddDynamic(this, &ANeonDashProjectile::OnEndOverlap);
+
 	RootComponent = ProjectileMesh;
 
 	// Use a ProjectileMovementComponent to govern this projectile's movement
@@ -32,6 +37,7 @@ ANeonDashProjectile::ANeonDashProjectile()
 	ProjectileMovement->Bounciness = 1.f;
 	// Die after 3 seconds by default
 	//InitialLifeSpan = 3.0f;
+	bCanProjectileDamage = false;
 }
 
 void ANeonDashProjectile::BeginPlay()
@@ -48,7 +54,7 @@ void ANeonDashProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor
 	{
 		OtherComp->AddImpulseAtLocation(GetVelocity() * 20.0f, GetActorLocation());
 	}
-
+	
 	if (!AllowedBounceCount)
 		Destroy();
 
@@ -56,8 +62,36 @@ void ANeonDashProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor
 
 }
 
+void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (GetInstigator() != OtherActor) {
+
+		auto HitPawn = Cast<ANeonDashPawn>(OtherActor);
+
+		if (HitPawn) {
+
+			auto HitPlayerState = Cast<ANeonDashPlayerState>(HitPawn->GetPlayerState());
+			auto InsigatorPlayerState = Cast<ANeonDashPlayerState>(GetInstigator()->GetPlayerState());
+
+			if (HitPlayerState && InsigatorPlayerState) {
+				if (HitPlayerState->GetPlayerTeamNumber() != InsigatorPlayerState->GetPlayerTeamNumber()) {
+
+					//A projectile Spawned by an opposing Pawn, hit the Player Pawn: apply damage
+					if(bCanProjectileDamage)
+						UGameplayStatics::ApplyDamage(HitPlayerState, 1, GetInstigatorController(), InsigatorPlayerState, nullptr);
+					
+					Destroy();
+				}
+
+			}
+		}
+	}
+
+}
+
 void ANeonDashProjectile::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	bCanProjectileDamage = true;
 	if (OtherActor->GetName().Contains("Barrier"))
 	{
 		UStaticMeshComponent* BarrierMesh = Cast<UStaticMeshComponent>(OtherActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));

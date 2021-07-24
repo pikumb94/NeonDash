@@ -2,12 +2,12 @@
 
 
 #include "NeonDashPlayerState.h"
-#include "HealthComponent.h"
+#include "ReplicatedStateComponent.h"
 
 
 ANeonDashPlayerState::ANeonDashPlayerState()
 {
-	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComp"));
+	RepStateComp = CreateDefaultSubobject<UReplicatedStateComponent>(TEXT("RepStateComp"));
 }
 
 void ANeonDashPlayerState::AddScore(float ScoreDelta)
@@ -17,10 +17,22 @@ void ANeonDashPlayerState::AddScore(float ScoreDelta)
 
 float ANeonDashPlayerState::GetHealth() const
 {
-	//return GetNetOwningPlayer()->GetPlayerController()->GetPawn()->GetComponentByClass<HealthComponent>()->Health;
-	return .0f;
+	
+	return RepStateComp->GetHealth();
+}
+
+float ANeonDashPlayerState::GetPlayerTeamNumber() const
+{
+	return RepStateComp->TeamNum;
 }
 
 void ANeonDashPlayerState::SetHealth(const float NewHealth)
 {
+	RepStateComp->SetHealth(NewHealth);
 }
+
+void ANeonDashPlayerState::SetPlayerState(uint8 teamNum)
+{
+	RepStateComp->TeamNum = teamNum;
+}
+
