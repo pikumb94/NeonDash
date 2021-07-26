@@ -17,6 +17,8 @@ const FName ANeonDashPawn::MoveForwardBinding("MoveForward");
 const FName ANeonDashPawn::MoveRightBinding("MoveRight");
 const FName ANeonDashPawn::FireForwardBinding("FireForward");
 const FName ANeonDashPawn::FireRightBinding("FireRight");
+
+const FName ANeonDashPawn::FireActionBinding("FireAction");
 const FName ANeonDashPawn::DashBinding("Dash");
 
 ANeonDashPawn::ANeonDashPawn()
@@ -33,6 +35,7 @@ ANeonDashPawn::ANeonDashPawn()
 	FireSound = FireAudio.Object;
 
 	// Create a camera boom...
+	/*
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when ship does
@@ -44,6 +47,7 @@ ANeonDashPawn::ANeonDashPawn()
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	CameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	CameraComponent->bUsePawnControlRotation = false;	// Camera does not rotate relative to arm
+	*/
 
 	// Movement
 	MoveSpeed = MoveSpeedInit = 1000.0f;
@@ -82,10 +86,17 @@ void ANeonDashPawn::InitShipMaterial(UMaterialInterface* PlayerMaterial)
 	ShipMeshComponent->SetMaterial(4, CoreShipMaterialInstance);
 
 	//Ship Bumps 0,3,5
-	BumpsShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
-	ShipMeshComponent->SetMaterial(0, BumpsShipMaterialInstance);
-	ShipMeshComponent->SetMaterial(3, BumpsShipMaterialInstance);
-	ShipMeshComponent->SetMaterial(5, BumpsShipMaterialInstance);
+	Bump1ShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
+	Bump2ShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
+	Bump3ShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
+
+	ShipMeshComponent->SetMaterial(0, Bump1ShipMaterialInstance);
+	Bump1ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"),10);
+	ShipMeshComponent->SetMaterial(3, Bump2ShipMaterialInstance);
+	Bump2ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 10);
+	ShipMeshComponent->SetMaterial(5, Bump3ShipMaterialInstance);
+	Bump3ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 10);
+
 }
 
 void ANeonDashPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -99,6 +110,8 @@ void ANeonDashPawn::SetupPlayerInputComponent(class UInputComponent* PlayerInput
 	PlayerInputComponent->BindAxis(FireRightBinding);
 
 	PlayerInputComponent->BindAction(DashBinding, IE_Pressed, this, &ANeonDashPawn::OnPawnDash);
+	PlayerInputComponent->BindAction(FireActionBinding, IE_Pressed, this, &ANeonDashPawn::OnFireActionPressed);
+	PlayerInputComponent->BindAction(FireActionBinding, IE_Released, this, &ANeonDashPawn::OnFireActionReleased);
 
 }
 
@@ -134,13 +147,13 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 	const float FireRightValue = GetInputAxisValue(FireRightBinding);
 	const FVector FireDirection = FVector(FireForwardValue, FireRightValue, 0.f);
 
-	if ((!bIsFireCharging) && FVector::DistXY(FireDirection, FVector::ZeroVector) > 0.5f) {
+	if ((!bIsFireCharging) && FireDirection.Size() > 0.5f) {
 		bIsFireCharging = true;
 
 		GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true);
 
 	}
-	else if (bIsFireCharging && FVector::DistXY(FireDirection, FVector::ZeroVector) < 0.5f) {
+	else if (bIsFireCharging && FireDirection.Size() < 0.5f) {
 		GetWorld()->GetTimerManager().PauseTimer(TimerHandle_ChargeTimer);
 		bIsFireCharging = false;
 
@@ -158,6 +171,32 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Charge: %d"), chargeMultiplier));//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("FireDir %s"), *FireDirection.ToString()));
 
 	PrevFireDirection = FireDirection;
+}
+
+void ANeonDashPawn::OnFireActionPressed()
+{
+	//bIsFireCharging = true;
+
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true);
+}
+
+void ANeonDashPawn::OnFireActionReleased()
+{
+	GetWorld()->GetTimerManager().PauseTimer(TimerHandle_ChargeTimer);
+	//bIsFireCharging = false;
+
+	// Find movement direction
+	//const float ForwardValue = GetInputAxisValue(MoveForwardBinding);
+	//const float RightValue = GetInputAxisValue(MoveRightBinding);
+	
+	// Clamp max size so that (X=1, Y=1) doesn't cause faster movement in diagonal directions
+	FVector FireDirection = GetActorForwardVector();//FVector(ForwardValue, RightValue, 0.f).GetClampedToMaxSize(1.0f);
+	FireDirection.Z = 0;
+	FireDirection.GetClampedToMaxSize(1.0f);
+	FireShot(FireDirection);
+
+	chargeMultiplier = 0;
+	SetChargeValues(chargeMultiplier);
 }
 
 void ANeonDashPawn::FireShot(FVector FireDirection)
@@ -252,7 +291,7 @@ void ANeonDashPawn::OnPawnDash()
 		RootComponent->MoveComponent(Movement, NewRotation, true);
 		RealMovement = GetActorLocation() - RealMovement;
 
-		if (DashBarrierClass)
+		if (DashBarrierClass && RealMovement.Size()>1.f)
 		{
 			FVector BarrierLocation = GetActorLocation() - (RealMovement / 2.f);//Movement
 			FRotator BarrierRotation = GetActorForwardVector().Rotation();

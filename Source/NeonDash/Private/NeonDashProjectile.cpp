@@ -77,8 +77,21 @@ void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponen
 				if (HitPlayerState->GetPlayerTeamNumber() != InsigatorPlayerState->GetPlayerTeamNumber()) {
 
 					//A projectile Spawned by an opposing Pawn, hit the Player Pawn: apply damage
-					if(bCanProjectileDamage)
+					if (bCanProjectileDamage) {
+
+						switch ((int)HitPlayerState->GetHealth()) {
+						case 3:
+							HitPawn->Bump1ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), -10);
+							break;
+						case 2:
+							HitPawn->Bump2ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), -10);
+							break;
+						default:
+							HitPawn->Bump3ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), -10);
+						}
+
 						UGameplayStatics::ApplyDamage(HitPlayerState, 1, GetInstigatorController(), InsigatorPlayerState, nullptr);
+					}
 					
 					Destroy();
 				}

@@ -16,12 +16,12 @@ class ANeonDashPawn : public APawn
 	class UStaticMeshComponent* ShipMeshComponent;
 
 	/** The camera */
-	UPROPERTY(Category = Camera, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* CameraComponent;
+	//UPROPERTY(Category = Camera, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	//class UCameraComponent* CameraComponent;
 
 	/** Camera boom positioning the camera above the character */
-	UPROPERTY(Category = Camera, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
+	//UPROPERTY(Category = Camera, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	//class USpringArmComponent* CameraBoom;
 
 public:
 	ANeonDashPawn();
@@ -88,6 +88,7 @@ public:
 	static const FName FireForwardBinding;
 	static const FName FireRightBinding;
 
+	static const FName FireActionBinding;
 	static const FName DashBinding;
 
 private:
@@ -103,11 +104,6 @@ private:
 
 	size_t chargeMultiplier;
 
-
-	class UMaterialInstanceDynamic* BodyShipMaterialInstance;
-	class UMaterialInstanceDynamic* BumpsShipMaterialInstance;
-	class UMaterialInstanceDynamic* CoreShipMaterialInstance;
-
 	/** Handle for the management of the charging shot fire */
 	FTimerHandle TimerHandle_ChargeTimer;
 	/** Handle for efficient management of ShotTimerExpired timer */
@@ -115,6 +111,8 @@ private:
 	/** Handle for management of dash cooldown */
 	FTimerHandle TimerHandle_DashTimer;
 	void OnPawnDash();
+	void OnFireActionPressed();
+	void OnFireActionReleased();
 	void SetChargeValues(int chargeValue);
 
 	TQueue<AActor*> SpawnedBarriers;
@@ -124,12 +122,19 @@ private:
 	float MoveSpeedInit;
 
 public:
+
+	class UMaterialInstanceDynamic* BodyShipMaterialInstance;
+	class UMaterialInstanceDynamic* Bump1ShipMaterialInstance;
+	class UMaterialInstanceDynamic* Bump2ShipMaterialInstance;
+	class UMaterialInstanceDynamic* Bump3ShipMaterialInstance;
+	class UMaterialInstanceDynamic* CoreShipMaterialInstance;
+
 	/** Returns ShipMeshComponent subobject **/
 	FORCEINLINE class UStaticMeshComponent* GetShipMeshComponent() const { return ShipMeshComponent; }
 	/** Returns CameraComponent subobject **/
-	FORCEINLINE class UCameraComponent* GetCameraComponent() const { return CameraComponent; }
+	//FORCEINLINE class UCameraComponent* GetCameraComponent() const { return CameraComponent; }
 	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	//FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
 	void InitShipMaterial(UMaterialInterface* PlayerMaterial);
 };
