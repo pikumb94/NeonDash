@@ -53,6 +53,10 @@ public:
 	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<AActor> DashBarrierClass;
 
+	/** Projectile Class to spawn when player is dashing */
+	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<class ANeonDashProjectile> ProjectileClass;
+
 	/* The maximum number of barriers that are allowed to be present simultaneously during the gameplay */
 	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
 	int MaxBarriersAllowed;
@@ -137,5 +141,7 @@ public:
 	//FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
 	void InitShipMaterial(UMaterialInterface* PlayerMaterial);
+	void ResetAllBarriers();
+
 };
 

@@ -38,32 +38,60 @@ ANeonDashProjectile::ANeonDashProjectile()
 	// Die after 3 seconds by default
 	//InitialLifeSpan = 3.0f;
 	bCanProjectileDamage = false;
+
+	CurrentProjectileState = 0;
+
 }
 
 void ANeonDashProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	ProjectileMaterialInstance = UMaterialInstanceDynamic::Create(ProjectileMesh->GetMaterial(0), nullptr);
+	InitialProjectileMaterial = ProjectileMesh->GetMaterial(0);
+	ProjectileMaterialInstance = UMaterialInstanceDynamic::Create(InitialProjectileMaterial, nullptr);
 	ProjectileMesh->SetMaterial(0, ProjectileMaterialInstance);
 }
 
 void ANeonDashProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	// Only add impulse and destroy projectile if we hit a physics
-	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics())
-	{
-		OtherComp->AddImpulseAtLocation(GetVelocity() * 20.0f, GetActorLocation());
-	}
-	
-	if (!AllowedBounceCount)
-		Destroy();
 
-	AllowedBounceCount--;
+	//Wall-Projectile Hit-Bounce
+	auto OtherProjectile = Cast<ANeonDashProjectile>(OtherActor);
+	if (OtherProjectile) {
+
+		if (CurrentProjectileState != 0 && OtherProjectile->CurrentProjectileState != 0 && CurrentProjectileState != OtherProjectile->CurrentProjectileState) {
+
+			auto Size = GetActorScale3D().SizeSquared();
+			auto OtherSize = OtherProjectile->GetActorScale3D().SizeSquared();
+			if (Size > OtherSize) {
+
+				RecolorProjectile(ProjectileMesh, CurrentProjectileState);
+
+			}
+			else {
+				if (Size > OtherSize)
+					RecolorProjectile(OtherProjectile->ProjectileMesh, OtherProjectile->CurrentProjectileState);
+				else {
+					RecolorProjectile(ProjectileMesh, CurrentProjectileState, true);
+					RecolorProjectile(OtherProjectile->ProjectileMesh, OtherProjectile->CurrentProjectileState, true);
+
+				}
+
+			}
+		}
+	}
+	else {
+		if (!AllowedBounceCount)
+			Destroy();
+
+		AllowedBounceCount--;
+	}
 
 }
 
 void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	//Define behaviour of projectiles overlapping with pawns
+
 	if (GetInstigator() != OtherActor) {
 
 		auto HitPawn = Cast<ANeonDashPawn>(OtherActor);
@@ -71,10 +99,9 @@ void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponen
 		if (HitPawn) {
 
 			auto HitPlayerState = Cast<ANeonDashPlayerState>(HitPawn->GetPlayerState());
-			auto InsigatorPlayerState = Cast<ANeonDashPlayerState>(GetInstigator()->GetPlayerState());
 
-			if (HitPlayerState && InsigatorPlayerState) {
-				if (HitPlayerState->GetPlayerTeamNumber() != InsigatorPlayerState->GetPlayerTeamNumber()) {
+			if (HitPlayerState && CurrentProjectileState > 0) {
+				if (HitPlayerState->GetPlayerTeamNumber() != CurrentProjectileState) {
 
 					//A projectile Spawned by an opposing Pawn, hit the Player Pawn: apply damage
 					if (bCanProjectileDamage) {
@@ -90,13 +117,20 @@ void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponen
 							HitPawn->Bump3ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), -10);
 						}
 
+						auto InsigatorPlayerState = Cast<ANeonDashPlayerState>(GetInstigator()->GetPlayerState());
 						UGameplayStatics::ApplyDamage(HitPlayerState, 1, GetInstigatorController(), InsigatorPlayerState, nullptr);
 					}
-					
+
 					Destroy();
 				}
 
+				else {
+					//If I'm hit by my projectiles=> reset alla barriers
+					HitPawn->ResetAllBarriers();
+				}
+
 			}
+
 		}
 	}
 
@@ -104,15 +138,38 @@ void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponen
 
 void ANeonDashProjectile::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	//Define behaviour of projectiles when exiting a barrier
+
 	bCanProjectileDamage = true;
 	if (OtherActor->GetName().Contains("Barrier"))
 	{
+		auto OtherPlayerState = Cast<ANeonDashPlayerState>(OtherActor->GetInstigator()->GetPlayerState());
+
 		UStaticMeshComponent* BarrierMesh = Cast<UStaticMeshComponent>(OtherActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-		FLinearColor BarrierColor;
-		BarrierMesh->GetMaterial(0)->GetVectorParameterValue(TEXT("DiffuseColor"), BarrierColor);
-		ProjectileMaterialInstance->SetVectorParameterValue(TEXT("DiffuseColor"), BarrierColor);
+
+		RecolorProjectile(BarrierMesh, OtherPlayerState->GetPlayerTeamNumber());
+
 		PowerUpProjectile();
 	}
+}
+
+void ANeonDashProjectile::RecolorProjectile(UStaticMeshComponent* CollidingMesh, uint8 CollidingMeshState, bool bForceResetMaterial)
+{
+	if (CurrentProjectileState == CollidingMeshState)
+		return;
+
+	FLinearColor CollidingColor;
+	CurrentProjectileState = CollidingMeshState;
+
+	if (bForceResetMaterial) {
+		InitialProjectileMaterial->GetVectorParameterValue(TEXT("DiffuseColor"), CollidingColor);
+		ProjectileMaterialInstance->SetVectorParameterValue(TEXT("DiffuseColor"), CollidingColor);
+		return;
+	}
+
+	CollidingMesh->GetMaterial(0)->GetVectorParameterValue(TEXT("DiffuseColor"), CollidingColor);
+	ProjectileMaterialInstance->SetVectorParameterValue(TEXT("DiffuseColor"), CollidingColor);
+
 }
 
 void ANeonDashProjectile::SetProjectileChargeState(int chargeCount)

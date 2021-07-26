@@ -46,12 +46,19 @@ public:
 
 	void PowerUpProjectile();
 
+	void RecolorProjectile(UStaticMeshComponent* CollidingMesh, uint8 CollidingMeshState, bool bForceResetMaterial = false);
+
 private:
 
 	int AllowedBounceCount;
 
+	uint8 CurrentProjectileState;
+
 	bool bCanProjectileDamage;
 
 	class UMaterialInstanceDynamic* ProjectileMaterialInstance;
+
+	class UMaterialInterface* InitialProjectileMaterial;
+
 };
 

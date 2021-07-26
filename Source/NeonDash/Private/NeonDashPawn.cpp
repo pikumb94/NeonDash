@@ -126,6 +126,7 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 
 	// Calculate  movement
 	const FVector Movement = MoveDirection * MoveSpeed * DeltaSeconds;
+	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Charge: %s"), *Movement.ToString()));
 
 	// If non-zero size, move this actor
 	if (Movement.SizeSquared() > 0.0f)
@@ -150,8 +151,8 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 	if ((!bIsFireCharging) && FireDirection.Size() > 0.5f) {
 		bIsFireCharging = true;
 
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true);
-
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true, 0.f);
+		MoveSpeed = MoveSpeedInit / 2;
 	}
 	else if (bIsFireCharging && FireDirection.Size() < 0.5f) {
 		GetWorld()->GetTimerManager().PauseTimer(TimerHandle_ChargeTimer);
@@ -177,7 +178,8 @@ void ANeonDashPawn::OnFireActionPressed()
 {
 	//bIsFireCharging = true;
 
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true);
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true,0.f);
+	MoveSpeed = MoveSpeedInit / 2;
 }
 
 void ANeonDashPawn::OnFireActionReleased()
@@ -215,7 +217,7 @@ void ANeonDashPawn::FireShot(FVector FireDirection)
 			if (World != nullptr)
 			{
 				// spawn the projectile
-				auto Projectile = World->SpawnActor<ANeonDashProjectile>(SpawnLocation, FireRotation);
+				auto Projectile = World->SpawnActor<ANeonDashProjectile>(ProjectileClass, SpawnLocation, FireRotation);
 				Projectile->SetInstigator(this);
 				Projectile->SetProjectileChargeState(chargeMultiplier);
 
@@ -261,7 +263,7 @@ void ANeonDashPawn::SetChargeValues(int chargeValue)
 	}
 	else {
 		CoreShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), chargeValue * 5);
-		MoveSpeed /= 2;
+		//MoveSpeed = MoveSpeedInit/2;
 	}
 
 }
@@ -300,6 +302,7 @@ void ANeonDashPawn::OnPawnDash()
 			SpawnInfo.Owner = this;
 
 			AActor* NewBarrier = GetWorld()->SpawnActor<AActor>(DashBarrierClass, BarrierLocation, BarrierRotation, SpawnInfo);
+			NewBarrier->SetInstigator(this);
 
 			NewBarrier->SetActorScale3D(FVector(RealMovement.Size() / 100.f, 1.f, 1.f));//DashOffset
 			UStaticMeshComponent* BarrierMesh = Cast<UStaticMeshComponent>(NewBarrier->GetComponentByClass(UStaticMeshComponent::StaticClass()));
@@ -338,4 +341,13 @@ void ANeonDashPawn::OnPawnDash()
 
 	}
 
+}
+
+void ANeonDashPawn::ResetAllBarriers()
+{
+	while (!SpawnedBarriers.IsEmpty()) {
+		AActor* Barrier;
+		SpawnedBarriers.Dequeue(Barrier);
+		Barrier->Destroy();
+	}
 }

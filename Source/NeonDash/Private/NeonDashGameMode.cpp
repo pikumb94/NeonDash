@@ -97,16 +97,18 @@ void ANeonDashGameMode::SpawnPlayer(APlayerController* PC) {
 	PC->Possess(LastSpawnedPawn);
 	auto NDPlayerState = Cast<ANeonDashPlayerState>(LastSpawnedPawn->GetPlayerState());
 	if (NDPlayerState)
-		NDPlayerState->SetPlayerState(SpawnPointIndex);
+		NDPlayerState->SetPlayerState(SpawnPointIndex + 1);
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (PC->GetPawn() ? PC->GetPawn()->GetName() : FString("NO PAWN")));
 
 	PC->SetViewTargetWithBlend(GameCamera);
-
+	PC->bAutoManageActiveCameraTarget = false;
 	
 }
 
 void ANeonDashGameMode::IngamePlayerKilled(AActor* VictimActor, AActor* KillerActor, AController* KillerController)
 {
+	auto NDPawn = Cast<ANeonDashPawn>(VictimActor);
+	NDPawn->ResetAllBarriers();
 	VictimActor->Destroy();
 	//@TODO: update scores and player total lives
 }
