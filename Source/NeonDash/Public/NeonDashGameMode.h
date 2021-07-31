@@ -61,6 +61,7 @@ public:
 	TSubclassOf<class ANeonDashPawn> NeonDashPawnClass;
 private:
 
+	TArray<APlayerController*> PlayerControllers;
 	int MaxNumPlayers = 4;
 	class ANeonDashPawn* LastSpawnedPawn;
 };

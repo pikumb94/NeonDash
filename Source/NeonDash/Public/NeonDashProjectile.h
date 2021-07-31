@@ -43,6 +43,7 @@ public:
 	FORCEINLINE UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
 	
 	void SetProjectileChargeState(int chargeCount);
+	void SetSniperProjectileChargeState(int chargeCount);
 
 	void PowerUpProjectile();
 

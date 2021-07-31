@@ -59,9 +59,11 @@ ANeonDashPawn::ANeonDashPawn()
 	GunOffset = FVector(90.f, 0.f, 0.f);
 	FireRate = 0.1f;
 	ChargeRate = 1.f;
+	CooldownTime = 2.f;
 	chargeMultiplier = 0;
 	bCanFire = true;
 	bIsFireCharging = false;
+	bIsCooldownExpired = true;
 
 	AutoPossessPlayer = EAutoReceiveInput::Disabled;
 	AutoPossessAI = EAutoPossessAI::Disabled;
@@ -71,7 +73,6 @@ ANeonDashPawn::ANeonDashPawn()
 void ANeonDashPawn::BeginPlay()
 {
 	Super::BeginPlay();
-
 
 }
 
@@ -91,11 +92,11 @@ void ANeonDashPawn::InitShipMaterial(UMaterialInterface* PlayerMaterial)
 	Bump3ShipMaterialInstance = UMaterialInstanceDynamic::Create(PlayerMaterial, nullptr);
 
 	ShipMeshComponent->SetMaterial(0, Bump1ShipMaterialInstance);
-	Bump1ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"),10);
+	Bump1ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"),20);
 	ShipMeshComponent->SetMaterial(3, Bump2ShipMaterialInstance);
-	Bump2ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 10);
+	Bump2ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 20);
 	ShipMeshComponent->SetMaterial(5, Bump3ShipMaterialInstance);
-	Bump3ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 10);
+	Bump3ShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 20);
 
 }
 
@@ -122,8 +123,9 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 	const float RightValue = GetInputAxisValue(MoveRightBinding);
 
 	// Clamp max size so that (X=1, Y=1) doesn't cause faster movement in diagonal directions
-	const FVector MoveDirection = FVector(ForwardValue, RightValue, 0.f).GetClampedToMaxSize(1.0f);
-
+	FVector MoveDirection = FVector(ForwardValue, RightValue, 0.f).GetClampedToMaxSize(1.0f);
+	MoveDirection = MoveDirection.GridSnap(1);//REMOVE TO BE NO MORE ORTHOGONAL!
+	MoveDirection.Normalize();
 	// Calculate  movement
 	const FVector Movement = MoveDirection * MoveSpeed * DeltaSeconds;
 	//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Charge: %s"), *Movement.ToString()));
@@ -146,8 +148,9 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 	// Create fire direction vector
 	const float FireForwardValue = GetInputAxisValue(FireForwardBinding);
 	const float FireRightValue = GetInputAxisValue(FireRightBinding);
-	const FVector FireDirection = FVector(FireForwardValue, FireRightValue, 0.f);
-
+	FVector FireDirection = FVector(FireForwardValue, FireRightValue, 0.f);
+	FireDirection = FireDirection.GridSnap(1);
+	/*
 	if ((!bIsFireCharging) && FireDirection.Size() > 0.5f) {
 		bIsFireCharging = true;
 
@@ -167,7 +170,8 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 		SetChargeValues(chargeMultiplier);
 
 	}
-
+	*/
+	FireShot(FireDirection);
 	//if (GEngine)
 	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Charge: %d"), chargeMultiplier));//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("FireDir %s"), *FireDirection.ToString()));
 
@@ -177,34 +181,47 @@ void ANeonDashPawn::Tick(float DeltaSeconds)
 void ANeonDashPawn::OnFireActionPressed()
 {
 	//bIsFireCharging = true;
+	if (bIsCooldownExpired) {
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true, 0.f);
+		MoveSpeed = MoveSpeedInit / 2;
+	}
 
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeTimer, this, &ANeonDashPawn::ChargeTimerExpired, ChargeRate, true,0.f);
-	MoveSpeed = MoveSpeedInit / 2;
 }
 
 void ANeonDashPawn::OnFireActionReleased()
 {
 	GetWorld()->GetTimerManager().PauseTimer(TimerHandle_ChargeTimer);
-	//bIsFireCharging = false;
 
-	// Find movement direction
-	//const float ForwardValue = GetInputAxisValue(MoveForwardBinding);
-	//const float RightValue = GetInputAxisValue(MoveRightBinding);
-	
-	// Clamp max size so that (X=1, Y=1) doesn't cause faster movement in diagonal directions
 	FVector FireDirection = GetActorForwardVector();//FVector(ForwardValue, RightValue, 0.f).GetClampedToMaxSize(1.0f);
 	FireDirection.Z = 0;
 	FireDirection.GetClampedToMaxSize(1.0f);
 	FireShot(FireDirection);
 
+
+	if (bIsCooldownExpired) {
+		bIsCooldownExpired = false;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle_ChargeShotCooldown, this, &ANeonDashPawn::CooldownTimerExpired, CooldownTime);
+		//CoreShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 0);
+		CoreShipMaterialInstance->SetVectorParameterValue(TEXT("DiffuseColor"), FColor::Black);
+	}
+
+	//bIsFireCharging = false;
+	//GetWorld()->GetTimerManager().
+	// Find movement direction
+	//const float ForwardValue = GetInputAxisValue(MoveForwardBinding);
+	//const float RightValue = GetInputAxisValue(MoveRightBinding);
+	
+	// Clamp max size so that (X=1, Y=1) doesn't cause faster movement in diagonal directions
+
+
 	chargeMultiplier = 0;
-	SetChargeValues(chargeMultiplier);
+	SetChargeValues(0);
 }
 
 void ANeonDashPawn::FireShot(FVector FireDirection)
 {
 	// If it's ok to fire again
-	if (bCanFire == true)
+	if (bCanFire && bIsCooldownExpired)
 	{
 		// If we are pressing fire stick in a direction
 		if (FireDirection.SizeSquared() > 0.0f)
@@ -219,7 +236,7 @@ void ANeonDashPawn::FireShot(FVector FireDirection)
 				// spawn the projectile
 				auto Projectile = World->SpawnActor<ANeonDashProjectile>(ProjectileClass, SpawnLocation, FireRotation);
 				Projectile->SetInstigator(this);
-				Projectile->SetProjectileChargeState(chargeMultiplier);
+				Projectile->SetSniperProjectileChargeState(chargeMultiplier);//SetProjectileChargeState
 
 			}
 
@@ -232,14 +249,24 @@ void ANeonDashPawn::FireShot(FVector FireDirection)
 				UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
 			}
 
-			bCanFire = false;
+			//bCanFire = false;
 		}
 	}
 }
 
 void ANeonDashPawn::ShotTimerExpired()
 {
-	bCanFire = true;
+		bCanFire = true;
+}
+
+void ANeonDashPawn::CooldownTimerExpired()
+{
+	bIsCooldownExpired = true;
+	GetWorld()->GetTimerManager().PauseTimer(TimerHandle_ChargeShotCooldown);
+	CoreShipMaterialInstance->SetVectorParameterValue(TEXT("DiffuseColor"), FColor::White);
+
+  	//CoreShipMaterialInstance->SetScalarParameterValue(TEXT("Emissive"), 1);
+
 }
 
 void ANeonDashPawn::ChargeTimerExpired()

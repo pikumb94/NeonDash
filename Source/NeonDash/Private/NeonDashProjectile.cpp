@@ -29,8 +29,8 @@ ANeonDashProjectile::ANeonDashProjectile()
 	// Use a ProjectileMovementComponent to govern this projectile's movement
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement0"));
 	ProjectileMovement->UpdatedComponent = ProjectileMesh;
-	ProjectileMovement->InitialSpeed = 3000.f;
-	ProjectileMovement->MaxSpeed = 3000.f;
+	ProjectileMovement->InitialSpeed = 1500.f;
+	ProjectileMovement->MaxSpeed = 1500.f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = true;
 	ProjectileMovement->ProjectileGravityScale = 0.f; // No gravity
@@ -126,7 +126,7 @@ void ANeonDashProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponen
 
 				else {
 					//If I'm hit by my projectiles=> reset alla barriers
-					HitPawn->ResetAllBarriers();
+					//HitPawn->ResetAllBarriers();
 				}
 
 			}
@@ -179,6 +179,26 @@ void ANeonDashProjectile::SetProjectileChargeState(int chargeCount)
 	SetActorScale3D(GetActorScale3D() * count);
 	ProjectileMovement->InitialSpeed /= count;
 	ProjectileMovement->MaxSpeed /= count;
+}
+
+void ANeonDashProjectile::SetSniperProjectileChargeState(int chargeCount)
+{	
+
+
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::SanitizeFloat(chargeCount));
+
+	if (chargeCount > 0) {
+		ProjectileMovement->MaxSpeed *= 2;
+		ProjectileMovement->Velocity *= 2;
+		AllowedBounceCount = chargeCount+1;
+		SetActorScale3D(GetActorScale3D() * FMath::Clamp(chargeCount,1,5));
+	}
+	else {
+		AllowedBounceCount = 1;
+	}
+
+	//else
+		//SetActorScale3D(GetActorScale3D() /2);
 }
 
 void ANeonDashProjectile::PowerUpProjectile()

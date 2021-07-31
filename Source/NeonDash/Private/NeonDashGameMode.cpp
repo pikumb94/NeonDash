@@ -57,24 +57,29 @@ void ANeonDashGameMode::SpawnPlayer(APlayerController* PC) {
 	ANeonDashGameState* GS = GetWorld()->GetGameState<ANeonDashGameState>();
 
 	if (ControlledPawn) {
-		ControlledPawn->Destroy();
 
 		if (GS && !Cast<ANeonDashPawn>(ControlledPawn))
 		{
 			GS->SetIngamePlayers(GS->GetIngamePlayers() + 1);
+			PlayerControllers.Add(PC);
 		}
-	}
 
+		ControlledPawn->Destroy();
+
+	}
 
 	int SpawnPointIndex = 0;
-	if (GS)
+	PlayerControllers.Find(PC, SpawnPointIndex);
+	/*if (GS)
 	{
 		SpawnPointIndex = FMath::Clamp(GS->GetIngamePlayers()-1,0, MaxNumPlayers-1);
-	}
+	}*/
 
 	APlayerStart* SpawnPoint = SpawnPoints[SpawnPointIndex];
 
 	FActorSpawnParameters ActorSpawnParams;
+	ActorSpawnParams.bNoFail = true;
+	ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	LastSpawnedPawn = GetWorld()->SpawnActor<ANeonDashPawn>(NeonDashPawnClass, SpawnPoint->GetActorLocation(), SpawnPoint->GetActorRotation(), ActorSpawnParams);
 	
 	switch (SpawnPointIndex) {
@@ -107,6 +112,9 @@ void ANeonDashGameMode::SpawnPlayer(APlayerController* PC) {
 
 void ANeonDashGameMode::IngamePlayerKilled(AActor* VictimActor, AActor* KillerActor, AController* KillerController)
 {
+	//ANeonDashGameState* GS = GetWorld()->GetGameState<ANeonDashGameState>();
+	//GS->SetIngamePlayers(GS->GetIngamePlayers() - 1);
+
 	auto NDPawn = Cast<ANeonDashPawn>(VictimActor);
 	NDPawn->ResetAllBarriers();
 	VictimActor->Destroy();

@@ -40,7 +40,9 @@ public:
 	/* How fast the weapon will charge */
 	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
 	float ChargeRate;
-
+	/* Cooldown of the charge shot */
+	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
+	float CooldownTime;
 	/* The speed our ship moves around the level */
 	UPROPERTY(Category = Gameplay, EditAnywhere, BlueprintReadWrite)
 	float MoveSpeed;
@@ -80,6 +82,9 @@ public:
 	/* Handler for the fire timer expiry */
 	void ShotTimerExpired();
 
+	/* Handler for the cooldown expiry */
+	void CooldownTimerExpired();
+
 	/* Handler for the charge timer expiry */
 	void ChargeTimerExpired();
 
@@ -106,10 +111,15 @@ private:
 	/* Bool to check if fire is charging  */
 	bool bIsFireCharging;
 
+	/* Bool to cooldown has expired  */
+	bool bIsCooldownExpired;
+
 	size_t chargeMultiplier;
 
 	/** Handle for the management of the charging shot fire */
 	FTimerHandle TimerHandle_ChargeTimer;
+	/** Handle for management of charge shot cooldown */
+	FTimerHandle TimerHandle_ChargeShotCooldown;
 	/** Handle for efficient management of ShotTimerExpired timer */
 	FTimerHandle TimerHandle_ShotTimerExpired;
 	/** Handle for management of dash cooldown */
