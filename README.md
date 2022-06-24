@@ -1,5 +1,5 @@
 # NeonDash
-A prototype of a 4 players top-down Arena videogame that has as core mechanics synergies with projectiles, barriers and obstacles.
+An __early__ prototype of a 4 players top-down Arena videogame that has as core mechanics synergies with projectiles, barriers and obstacles.
 The game is in its first iterations and so is in continious development and far from a polished final product.
 
 ## The Gameplay up to now
@@ -19,4 +19,4 @@ When a projectile of a non-neutral given color hits a player of an opposing colo
 </p>
 </p>
 
-In the release section you can find the executable of the game. </br>Your feedbacks on this projects are always precious and welcomed, including bugs that you can report in the Gihub Issue section.
+In the release section you can find the executable of the game. </br>Your feedbacks on this projects are always precious and welcomed, including bugs that you can report in the Github Issue section.
